@@ -1,0 +1,39 @@
+name: final_project_enviroment
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  # Base Python from your course
+  - python=3.10  # Upgraded to 3.10 for better support with Diffusers/Stable Diffusion
+  - ipython
+  - jupyter
+  - jupyterlab
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - tqdm
+  
+  # Deep Learning Core
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.8  # Updated for modern GPUs; matches Slurm cluster standards
+  
+  - pip:
+    # Stable Diffusion Essentials
+    - diffusers        # The main library for Stable Diffusion
+    - transformers     # Required for the CLIP text encoder
+    - accelerate       # Handles GPU memory optimizations and Slurm/Multi-GPU
+    - safetensors      # For loading model weights safely
+    - ftfy             # Fixes text encoding for prompts
+    
+    # Utilities from your prior HWs
+    - opencv-python    # Useful for image processing
+    - seaborn          # Good for plotting results
+    - torchviz         # Helpful for your project report/visualizations
+
+platforms:
+  - win-64
+  - linux-64
