@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 import os
 
-def run_vanilla_tests(masks,imageObjects):
+def run_vanilla_tests(masks, imageObjects, cfg=0):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
     model_id = "../stable-diffusion-2-base"
@@ -23,28 +23,41 @@ def run_vanilla_tests(masks,imageObjects):
         for mask in masks:
             i = 1
             for prompt in image.prompts:
+                do_cfg = cfg > 0
                 prompt = pipe.encode_prompt(prompt, device, num_images_per_prompt=1, 
-                                            do_classifier_free_guidance=False)[0]
+                                            do_classifier_free_guidance=do_cfg)[0]
                 result_image = generate_image_vanilla(mask.image, image.image, prompt, pipe, 
-                                                      scheduler, device, dtype)
+                                                      scheduler, device, dtype, cfg)
                 file_path = os.path.join(output_dir, 
                                          f"{mask.name}_mask-{image.name}-prompt{i}.png")
                 result_image.save(file_path)
                 i = i+1
 
-def generate_image_vanilla(mask, image, prompt, pipe, scheduler, device, dtype):
+def generate_image_vanilla(mask, image, prompt, pipe, scheduler, device, dtype, cfg):
     latents_x0, mask = preprocess(image, mask, pipe.vae, device, dtype)
     latents = torch.randn_like(latents_x0)
     
-    for t in scheduler.timesteps:
-        print (t)
+    for i, t in enumerate(scheduler.timesteps):
+        t = t.item()
+        if cfg > 0:
+            latents_model = torch.cat([latents] * 2)
+        else:
+            latents_model = latents
+            
         with torch.no_grad():
-            noise_pred = pipe.unet(latents,t, encoder_hidden_states=prompt).sample
+            noise_pred = pipe.unet(latents_model,t, encoder_hidden_states=prompt).sample
 
-        latents_unknown = scheduler.step(noise_pred, t, latents).prev_sample
+        if cfg > 0:
+            noise_pred_no_prompt, noise_pred_prompt = noise_pred.chunk(2)
+            noise_pred = noise_pred_no_prompt + cfg * (noise_pred_prompt - noise_pred_no_prompt)
 
-        noise = torch.randn_like(latents_x0)
-        latents_known = scheduler.add_noise(latents_x0, noise, t-1)
+        latents_unknown = step(scheduler, noise_pred, latents, t)
+                
+        if i < len(scheduler.timesteps) - 1:
+            t_prev = scheduler.timesteps[i+1].item()
+        else:
+            t_prev = 0
+        latents_known = add_noise(scheduler, latents_x0, t_prev)
 
         latents = (mask * latents_known) + ((1.0 - mask) * latents_unknown)
     
@@ -76,6 +89,31 @@ def postprocess (latents, vae):
     
     return Image.fromarray(image)
     
+def step(scheduler, pred_noise, latent, t, t_prev):
+    
+    alpha_prod_t = scheduler.alphas_cumprod[t]
+    alpha_prod_t_prev = scheduler.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0).to(latent.device)
+    
+    pred_original_sample = (latent - (1 - alpha_prod_t)**0.5 * pred_noise) / (alpha_prod_t**0.5)
 
+    beta_t = 1 - alpha_prod_t / alpha_prod_t_prev
+    
+    coeff_x0 = (alpha_prod_t_prev**0.5 * beta_t) / (1 - alpha_prod_t)
+    coeff_xt = ((alpha_prod_t / alpha_prod_t_prev)**0.5 * (1 - alpha_prod_t_prev)) / (1 - alpha_prod_t)
+    
+    mean = coeff_x0 * pred_original_sample + coeff_xt * latent
+
+    if t > 0:
+        noise = torch.randn_like(latent)
+        # חישוב השונות (Posterior Variance)
+        variance = ((1 - alpha_prod_t_prev) / (1 - alpha_prod_t)) * beta_t
+        return mean + (variance**0.5) * noise
+    
+    return mean
+
+def add_noise(scheduler, latents, t):
+    noise = torch.randn_like(latents)
+    alpha_prod = scheduler.alphas_cumprod[t]
+    return (alpha_prod ** 0.5) * latents + ((1-alpha_prod)** 0.5) * noise
 
 
