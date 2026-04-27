@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 import os
 
-def run_vanilla_tests(masks, imageObjects, cfg=0):
+def run_vanilla_tests(masks, imageObjects, cfg=0, seed=0):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
     model_id = "../stable-diffusion-2-base"
@@ -13,7 +13,7 @@ def run_vanilla_tests(masks, imageObjects, cfg=0):
     
     scheduler = DDPMScheduler.from_pretrained(model_id, subfolder="scheduler")
     
-    num_inference_steps = 5 
+    num_inference_steps = 50
     scheduler.set_timesteps(num_inference_steps)
     
     
@@ -23,10 +23,18 @@ def run_vanilla_tests(masks, imageObjects, cfg=0):
         for mask in masks:
             i = 1
             for prompt in image.prompts:
+                if seed > 0:
+                    torch.manual_seed(seed)
+                    if torch.cuda.is_available():
+                        torch.cuda.manual_seed_all(seed)
                 do_cfg = cfg > 0
-                prompt = pipe.encode_prompt(prompt, device, num_images_per_prompt=1, 
-                                            do_classifier_free_guidance=do_cfg)[0]
-                result_image = generate_image_vanilla(mask.image, image.image, prompt, pipe, 
+                prompt_embeds, negative_embeds = pipe.encode_prompt(prompt, device, num_images_per_prompt=1, 
+                                            do_classifier_free_guidance=do_cfg)
+                if do_cfg:
+                    prompt_input = torch.cat([negative_embeds, prompt_embeds], dim=0)
+                else:
+                    prompt_input = prompt_embeds
+                result_image = generate_image_vanilla(mask.image, image.image, prompt_input, pipe, 
                                                       scheduler, device, dtype, cfg)
                 file_path = os.path.join(output_dir, 
                                          f"{mask.name}_mask-{image.name}-prompt{i}.png")
@@ -43,15 +51,21 @@ def generate_image_vanilla(mask, image, prompt, pipe, scheduler, device, dtype, 
             latents_model = torch.cat([latents] * 2)
         else:
             latents_model = latents
-            
+
+        t_input = torch.tensor([t] * latents_model.shape[0], device=device).to(dtype=torch.long)
         with torch.no_grad():
-            noise_pred = pipe.unet(latents_model,t, encoder_hidden_states=prompt).sample
+            noise_pred = pipe.unet(latents_model,t_input, encoder_hidden_states=prompt).sample
 
         if cfg > 0:
             noise_pred_no_prompt, noise_pred_prompt = noise_pred.chunk(2)
             noise_pred = noise_pred_no_prompt + cfg * (noise_pred_prompt - noise_pred_no_prompt)
 
-        latents_unknown = step(scheduler, noise_pred, latents, t)
+        if i < len(scheduler.timesteps) - 1:
+            t_prev = scheduler.timesteps[i+1].item()
+        else:
+            t_prev = 0
+
+        latents_unknown = step(scheduler, noise_pred, latents, t, t_prev)
                 
         if i < len(scheduler.timesteps) - 1:
             t_prev = scheduler.timesteps[i+1].item()
@@ -91,27 +105,29 @@ def postprocess (latents, vae):
     
 def step(scheduler, pred_noise, latent, t, t_prev):
     
-    alpha_prod_t = scheduler.alphas_cumprod[t]
-    alpha_prod_t_prev = scheduler.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0).to(latent.device)
-    
-    pred_original_sample = (latent - (1 - alpha_prod_t)**0.5 * pred_noise) / (alpha_prod_t**0.5)
+    alpha_bar_t = scheduler.alphas_cumprod[t]
+    alpha_bar_t_prev = scheduler.alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0).to(latent.device)
 
-    beta_t = 1 - alpha_prod_t / alpha_prod_t_prev
+    alpha_t = alpha_bar_t / alpha_bar_t_prev
+    beta_t = 1 - alpha_t
+
+    # mu = (1 / sqrt(alpha_t)) * (latent - (beta_t / sqrt(1 - alpha_bar_t)) * pred_noise)
     
-    coeff_x0 = (alpha_prod_t_prev**0.5 * beta_t) / (1 - alpha_prod_t)
-    coeff_xt = ((alpha_prod_t / alpha_prod_t_prev)**0.5 * (1 - alpha_prod_t_prev)) / (1 - alpha_prod_t)
+    coeff_inv_sqrt_alpha = 1 / (alpha_t ** 0.5)
+    coeff_noise = beta_t / ((1 - alpha_bar_t) ** 0.5)
     
-    mean = coeff_x0 * pred_original_sample + coeff_xt * latent
+    mu = coeff_inv_sqrt_alpha * (latent - coeff_noise * pred_noise)
 
     if t > 0:
+        variance = ( (1 - alpha_bar_t_prev) / (1 - alpha_bar_t) ) * beta_t
         noise = torch.randn_like(latent)
-        # חישוב השונות (Posterior Variance)
-        variance = ((1 - alpha_prod_t_prev) / (1 - alpha_prod_t)) * beta_t
-        return mean + (variance**0.5) * noise
+        return mu + (variance ** 0.5) * noise
     
-    return mean
+    return mu
 
 def add_noise(scheduler, latents, t):
+    if t < 0:
+        return latents
     noise = torch.randn_like(latents)
     alpha_prod = scheduler.alphas_cumprod[t]
     return (alpha_prod ** 0.5) * latents + ((1-alpha_prod)** 0.5) * noise
