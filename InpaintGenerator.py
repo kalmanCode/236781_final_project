@@ -95,7 +95,7 @@ class VanillaGenerator(InpaintGenerator):
 
 # --- 2. Resampling (RePaint) Implementation ---
 class ResamplingGenerator(VanillaGenerator):
-    def __init__(self, jump_length=10, jump_inn_sample=10):
+    def __init__(self, jump_length=10, jump_n_sample=10):
         self.jump_length = jump_length  # How many steps to go back
         self.jump_n_sample = jump_n_sample  # How many times to repeat the jump
 
