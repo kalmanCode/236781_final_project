@@ -108,7 +108,8 @@ def preprocess(image, mask, vae, device, dtype):
     with torch.no_grad():
         latents = vae.encode(img_tensor).latent_dist.sample()
         latents = latents * 0.18215
-    
+
+    mask = mask.resize((64, 64), resample=Image.NEAREST)
     mask = np.array(mask).astype(np.float32) / 255.0
     mask = 1.0 - mask 
     mask = torch.from_numpy(mask).to(device, dtype=dtype).unsqueeze(0).unsqueeze(0)
