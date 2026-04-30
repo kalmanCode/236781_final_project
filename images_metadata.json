@@ -1,0 +1,72 @@
+[
+    {
+        "name": "pizza_box_pizza",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.11 (1).jpeg",
+        "prompt": "a pizza box with a pizza in it",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "woman_tending_garden",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.11.jpeg",
+        "prompt": "a woman is tending a garden with a rake",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "lemon_blue_surface",
+        "filename": "WhatsApp Image 2026-04-12 at 13.45.19.jpeg",
+        "prompt": "a lemon on a blue surface",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "view_mountains_lake",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.12 (3).jpeg",
+        "prompt": "a view of the mountains and lake",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "rocky_beach_large",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.12.jpeg",
+        "prompt": "a rocky beach with a large rock in the fore",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "row_rubber_ducks",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.12 (4).jpeg",
+        "prompt": "a row of rubber ducks",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "field_red_flowers",
+        "filename": "19.jpeg",
+        "prompt": "a field of red flowers",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "watch_wrist",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.12 (2).jpeg",
+        "prompt": "a watch on the wrist",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "bowl_fruit_wooden",
+        "filename": "WhatsApp Image 2026-04-27 at 15.06.12 (1).jpeg",
+        "prompt": "a bowl of fruit on a wooden table",
+        "center_x": 256,
+        "center_y": 256
+    },
+    {
+        "name": "blue_pink_toy",
+        "filename": "WhatsApp Image 2026-04-12 at 12.17.33.jpeg",
+        "prompt": "a blue and pink toy with a small yellow toy on it",
+        "center_x": 256,
+        "center_y": 256
+    }
+]

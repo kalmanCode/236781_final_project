@@ -19,9 +19,9 @@ def create_checkerboard_mask(k, width=64, height=64):
     
     mask_array = (mask_array * 255).astype(np.uint8) # make the 1 into 255 (white)
     
-    return MaskObject("chessboard", f"chessboard_k={k}", Image.fromarray(mask_array).convert("L")) 
+    return MaskObject("checkerboard", f"checkerboard_k={k}", Image.fromarray(mask_array).convert("L")) 
 
-def create_row_stripe_advanced_mask(stripe_width, gap_size, width=64, height=64):
+def create_horizontal_stripe_advanced_mask(stripe_width, gap_size, width=64, height=64):
 
     period_pattern = np.array([0] * stripe_width + [255] * gap_size)
     
@@ -30,14 +30,14 @@ def create_row_stripe_advanced_mask(stripe_width, gap_size, width=64, height=64)
     
     mask_array = np.tile(vertical_column[:, np.newaxis], (1, width)).astype(np.uint8)
     
-    return MaskObject("row_stripe", f"row_stripe_{stripe_width},{gap_size}",Image.fromarray(mask_array).convert("L"))
+    return MaskObject("horizontal_stripe", f"horizontal_stripe_{stripe_width},{gap_size}",Image.fromarray(mask_array).convert("L"))
 
-def create_row_stripe_mask(k, width=64, height=64):
-    mask = create_row_stripe_advanced_mask(k, k, width, height)
-    mask.name = f"row_stripe_k={k}"
+def create_horizontal_stripe_mask(k, width=64, height=64):
+    mask = create_horizontal_stripe_advanced_mask(k, k, width, height)
+    mask.name = f"horizontal_stripe_k={k}"
     return mask
 
-def create_col_stripe_advanced_mask(stripe_width, gap_size, width=64, height=64):
+def create_vertical_stripe_advanced_mask(stripe_width, gap_size, width=64, height=64):
 
     period_pattern = np.array([0] * stripe_width + [255] * gap_size)
     
@@ -46,11 +46,11 @@ def create_col_stripe_advanced_mask(stripe_width, gap_size, width=64, height=64)
     
     mask_array = np.tile(horizontal_row[np.newaxis, :], (height, 1)).astype(np.uint8)
     
-    return MaskObject("col_stripe", f"col_stripe_{stripe_width},{gap_size}",Image.fromarray(mask_array).convert("L"))
+    return MaskObject("vertical_stripe", f"vertical_stripe_{stripe_width},{gap_size}",Image.fromarray(mask_array).convert("L"))
 
-def create_col_stripe_mask(k, width=64, height=64):
-    mask = create_col_stripe_advanced_mask(k, k, width, height)
-    mask.name = f"col_stripe_k={k}"
+def create_vertical_stripe_mask(k, width=64, height=64):
+    mask = create_vertical_stripe_advanced_mask(k, k, width, height)
+    mask.name = f"vertical_stripe_k={k}"
     return mask
 
 def create_stochastic_mask(p, seed, width=64, height=64,):
