@@ -19,7 +19,7 @@ def get_concise_name(caption):
 
 def prepare_research_data(input_folder, output_json="images_metadata.json"):
     """
-    מייצר פרומפטים אוטומטיים ושומר את המטא-דאטה לקובץ JSON.
+    Generate prompt from image and save metadata into JSON file.
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
@@ -34,13 +34,13 @@ def prepare_research_data(input_folder, output_json="images_metadata.json"):
         img_path = os.path.join(input_folder, filename)
         raw_image = Image.open(img_path).convert('RGB')
         
-        # שלב 1: יצירת פרומפט אוטומטי
+        # step 1: automatic prompting
         inputs = processor(raw_image, return_tensors="pt").to(device)
         with torch.no_grad():
             out = model.generate(**inputs)
             caption = processor.decode(out[0], skip_special_tokens=True)
         
-        # שלב 2: בניית מטא-דאטה
+        # step 2: building metadata
         obj_name = get_concise_name(caption)
         entry = {
             "name": obj_name,
@@ -50,7 +50,7 @@ def prepare_research_data(input_folder, output_json="images_metadata.json"):
         metadata.append(entry)
         print(f"Processed: {filename} -> {obj_name}")
 
-    # שמירה ל-JSON
+    # save to JSON
     with open(output_json, 'w', encoding='utf-8') as f:
         json.dump(metadata, f, indent=4, ensure_ascii=False)
     
@@ -58,7 +58,7 @@ def prepare_research_data(input_folder, output_json="images_metadata.json"):
 
 def load_objects_from_json(json_path, images_folder):
     """
-    טוען את קובץ ה-JSON והופך אותו לרשימה של אובייקטי ImageObject.
+    Load the json file and create list of 'ImageObject's
     """
     with open(json_path, 'r', encoding='utf-8') as f:
         metadata = json.load(f)
