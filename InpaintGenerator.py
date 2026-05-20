@@ -132,17 +132,3 @@ class ResamplingGenerator(VanillaGenerator):
             i += 1
 
         return self.postprocess(latents, pipe.vae)
-
-
-# --- Factory / Wrapper ---
-class InpaintContext:
-    def __init__(self, mode="vanilla", **kwargs):
-        if mode == "vanilla":
-            self.generator = VanillaGenerator()
-        elif mode == "resampling":
-            self.generator = ResamplingGenerator(**kwargs)
-        else:
-            raise ValueError("Unknown mode")
-
-    def run(self, mask, image, prompt, pipe, scheduler, cfg):
-        return self.generator.generate(mask, image, prompt, pipe, scheduler, cfg)

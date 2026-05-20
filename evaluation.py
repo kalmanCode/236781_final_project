@@ -71,8 +71,8 @@ import pandas as pd
 
 def summarize_results(df_list, experiment_names):
     """
-    מעבדת רשימת DataFrames, מוסיפה מזהים, ומחזירה מילון עם 
-    טבלאות ממוצעים מפורטות לכל מדד לפי תמונה ולפי מסיכה.
+    Processes a list of DataFrames, adds experiment identifiers, and returns 
+    a dictionary containing detailed average tables for each metric by image and by mask.
     """
     processed_dfs = []
     
@@ -84,41 +84,41 @@ def summarize_results(df_list, experiment_names):
         temp_df = df.copy()
         temp_df['exp'] = name
         
-        # שמירה לקובץ CSV אישי לכל ניסוי
+        # Save to an individual CSV file for each experiment
         temp_df.to_csv(f"results_{name}.csv", index=False)
         processed_dfs.append(temp_df)
 
     if not processed_dfs:
         raise ValueError("All provided DataFrames are empty. Cannot summarize.")
 
-    # איחוד כל התוצאות
+    # Consolidate all results
     all_results = pd.concat(processed_dfs, ignore_index=True)
 
-    # וידוא עמודות נדרשות
+    # Validate required columns
     required_cols = ['image_name', 'mask_name', 'exp', 'PSNR', 'SSIM', 'LPIPS']
     missing = [c for c in required_cols if c not in all_results.columns]
     if missing:
         raise KeyError(f"Missing columns in DataFrames: {missing}")
 
-    # חישוב ממוצעים בסיסיים
+    # Calculate baseline averages
     metrics = ['PSNR', 'SSIM', 'LPIPS']
     image_means_raw = all_results.groupby(['image_name', 'exp'])[metrics].mean().reset_index()
     mask_means_raw = all_results.groupby(['mask_name', 'exp'])[metrics].mean().reset_index()
 
-    # יצירת 6 טבלאות ההשוואה (Pivots)
+    # Create 6 comparison tables (Pivots)
     comparison_tables = {}
     
     for metric in metrics:
-        # טבלה לפי תמונה עבור המדד
+        # Table by image for the specific metric
         comparison_tables[f'{metric}_by_image'] = image_means_raw.pivot(
             index='image_name', columns='exp', values=metric
         )
-        # טבלה לפי מסיכה עבור המדד
+        # Table by mask for the specific metric
         comparison_tables[f'{metric}_by_mask'] = mask_means_raw.pivot(
             index='mask_name', columns='exp', values=metric
         )
 
-    # החזרת התוצאות בצורה מאורגנת
+    # Return results organized neatly
     return {
         "all_results": all_results,
         "tables": comparison_tables,
@@ -127,27 +127,3 @@ def summarize_results(df_list, experiment_names):
             "by_mask": mask_means_raw
         }
     }
-
-
-def display_styled_tables(summary_data):
-    """
-    יוצרת ומציגה 6 טבלאות מעוצבות (3 מדדים X תמונה/מסיכה).
-    """
-    tables = summary_data['tables']
-    
-    display(HTML("<h2>📈 טבלאות השוואה מפורטות (ממוצעים)</h2>"))
-    
-    for title, df in tables.items():
-        metric = title.split('_')[0]
-        display(HTML(f"<h3>{title}</h3>"))
-        
-        # קביעת לוגיקה: מה עדיף?
-        is_higher_better = metric in ['PSNR', 'SSIM']
-        
-        # עיצוב: ירוק לטוב ביותר, כתום לנמוך ביותר בכל שורה
-        styled = df.style.highlight_max(axis=1, color='lightgreen' if is_higher_better else 'coral') \
-                         .highlight_min(axis=1, color='coral' if is_higher_better else 'lightgreen') \
-                         .format("{:.4f}")
-        
-        display(styled)
-        print("-" * 30)

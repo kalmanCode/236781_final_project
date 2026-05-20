@@ -110,7 +110,7 @@ def resampling_experiment(images, seed=42, show=False, cfg=0, jump_length=10, ju
         output_dir = f"resampling{cfg_str}_jump_length_{jump_length}_jump_n_samples_{jump_n_sample}/{mask.type}/{mask.name}"
         os.makedirs(output_dir, exist_ok=True)
         if show:
-            print(f"{mask.name}")
+            print(f"{mask.name}:")
         for image in images:
             if seed > 0:
                 torch.manual_seed(seed)

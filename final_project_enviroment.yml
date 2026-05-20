@@ -20,6 +20,7 @@ dependencies:
   - pytorch
   - torchvision
   - pytorch-cuda=11.8  # Updated for modern GPUs; matches Slurm cluster standards
+  - torchmetrics
   
   - pip:
     # Stable Diffusion Essentials
